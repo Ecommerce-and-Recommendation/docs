@@ -400,6 +400,50 @@ Hệ thống gợi ý sử dụng Content-based Filtering, kết hợp đặc tr
 
 > **Nhận xét:** Hit Rate đạt 72.2% cho thấy cứ 10 sản phẩm được gợi ý thì trung bình hơn 7 sản phẩm trùng với hành vi mua thực tế của khách hàng — một kết quả rất ấn tượng cho mô hình Content-based thuần túy.
 
+### 5.4. Retrain Random Forest với Segment ID
+
+Ý tưởng cốt lõi của notebook này là tận dụng kết quả phân cụm (K-Means) để **bổ sung thêm đặc trưng `segment_id`** vào mô hình Random Forest, tạo sự liên kết giữa các mô hình ML trong hệ thống.
+
+**a) So sánh RF không segment vs có segment**
+
+![Comparison Chart](assets/nb5_comparison_chart_a579b9e4.png)
+
+| Chỉ số | RF (Không segment) | RF (Có segment_id) | Thay đổi |
+| ------ | ------------------- | ------------------- | -------- |
+| Accuracy | 0.7164 | 0.7085 | -0.008 |
+| Precision | 0.7450 | 0.7271 | -0.018 |
+| Recall | 0.6640 | **0.6739** | **+0.010** |
+| F1-Score | 0.7022 | 0.6995 | -0.003 |
+| ROC-AUC | 0.7931 | 0.7891 | -0.004 |
+
+> **Nhận xét:** Việc thêm `segment_id` giúp **cải thiện Recall** (+1.0%), nghĩa là mô hình phát hiện được nhiều khách hàng tiềm năng hơn. Tuy nhiên, các chỉ số khác giảm nhẹ không đáng kể. Feature `segment_id` đóng góp ở vị trí #8 (importance = 0.0600), cho thấy nó bổ sung thông tin có ý nghĩa nhưng không gây nhiễu.
+
+**b) Cross-Validation mô hình cuối cùng**
+
+![CV & ROC Curves](assets/nb5_cv_roc_curves_77a69f2b.png)
+
+| Metric | Giá trị |
+| ------ | ------- |
+| CV Accuracy | 0.7386 ± 0.0082 |
+| CV F1-Score | 0.7306 ± 0.0118 |
+| CV ROC-AUC | 0.8127 ± 0.0140 |
+| CV Precision | 0.7590 ± 0.0124 |
+| CV Recall | 0.7049 ± 0.0252 |
+
+**c) Tổng kết 3 mô hình đã xuất**
+
+| Model | Vai trò | Chỉ số chính | Files xuất |
+| ----- | ------- | ------------- | ---------- |
+| **Random Forest** | Dự đoán mua hàng | CV F1: 0.7306, ROC-AUC: 0.8127 | `random_forest_model.joblib`, `scaler_rfm.joblib` |
+| **PCA + K-Means** | Phân cụm khách hàng | Silhouette: 0.3740, K=4 | `kmeans_model.joblib`, `pca_transformer.joblib` |
+| **TF-IDF + KNN** | Gợi ý sản phẩm | Hit Rate: 72.2% | `knn_model.joblib`, `tfidf_vectorizer.joblib` |
+
+> **Liên kết giữa các mô hình:**
+>
+> - K-Means → `segment_id` → Random Forest feature
+> - Random Forest → `purchase_probability` → Ngưỡng kích hoạt Dynamic Voucher
+> - KNN → Danh sách gợi ý hiển thị trên giao diện người dùng
+
 ---
 
 ## 6. Kết luận
