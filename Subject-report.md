@@ -351,9 +351,54 @@ Sử dụng kết hợp 3 chỉ số: Inertia (Elbow), Silhouette Score và Davi
 > - Nhóm **Tiềm năng** (44.5%) chiếm đa số, có recency tốt và frequency ổn định — mục tiêu lý tưởng cho Dynamic Voucher.
 > - Nhóm **Ngủ đông** (21.3%) có recency rất cao (410 ngày), cần chiến dịch re-engagement.
 
-### 5.3. Mô hình Gợi ý sản phẩm (KNN)
+### 5.3. Mô hình Gợi ý sản phẩm (TF-IDF + KNN)
 
-- Chỉ số Hit Rate khi đánh giá theo lịch sử đồng mua sắm cho kết quả cao, khẳng định các sản phẩm được đề xuất có độ tương đồng ngữ nghĩa cực kỳ tốt.
+Hệ thống gợi ý sử dụng Content-based Filtering, kết hợp đặc trưng ngữ nghĩa (text) và thuộc tính số học để tìm sản phẩm tương đồng.
+
+**a) Xây dựng Feature Matrix**
+
+| Thành phần | Chi tiết |
+| ---------- | -------- |
+| TF-IDF Vectorizer | 500 terms từ Description, loại bỏ stop words |
+| Numeric Features | `avg_price`, `purchase_count`, `total_qty_sold`, `num_customers`, `avg_qty_per_order` (trọng số ×0.3) |
+| Ma trận tổng hợp | **(4,499 sản phẩm × 505 features)** |
+
+**b) Cấu hình KNN**
+
+- **K = 10** neighbors (loại trừ chính nó)
+- **Metric:** Cosine Similarity
+- **Tổng số sản phẩm trong index:** 4,499
+
+**c) Demo kết quả gợi ý (Top-5 sản phẩm bán chạy nhất)**
+
+| Sản phẩm gốc | Top-1 Recommendation | Similarity |
+| ------------- | -------------------- | ---------- |
+| WHITE HANGING HEART T-LIGHT HOLDER | RED HANGING HEART T-LIGHT HOLDER | 0.869 |
+| REGENCY CAKESTAND 3 TIER | SWEETHEART CAKESTAND 3 TIER | 0.543 |
+| JUMBO BAG RED RETROSPOT | JUMBO BAG OWLS | 0.736 |
+| ASSORTED COLOUR BIRD ORNAMENT | ASSORTED COLOUR SILK GLASSES CASE | 0.839 |
+| LUNCH BAG RED RETROSPOT | LUNCH BAG CARS BLUE | 0.728 |
+
+> **Nhận xét:** Thuật toán cho thấy khả năng nhận diện ngữ nghĩa rất tốt — các sản phẩm được gợi ý luôn cùng dòng sản phẩm (ví dụ: T-Light Holder → T-Light Holder, Jumbo Bag → Jumbo Bag), với điểm Cosine Similarity cao (trung bình > 0.7).
+
+**d) Heatmap độ tương đồng (Top 20 sản phẩm)**
+
+![Similarity Heatmap](assets/nb4_similarity_heatmap_31625f76.png)
+
+**e) Đánh giá Hit Rate**
+
+Để đánh giá chất lượng gợi ý trên dữ liệu thực tế, hệ thống sử dụng phương pháp **Hit Rate**: Với mỗi sản phẩm mà khách hàng đã mua, kiểm tra xem Top-10 gợi ý có chứa sản phẩm nào mà khách đó cũng đã mua hay không.
+
+![Hit Rate Evaluation](assets/nb4_hit_rate_7ef02751.png)
+
+| Chỉ số | Giá trị |
+| ------ | ------- |
+| Overall Hit Rate | **72.2%** |
+| Avg Customer Hit Rate | 61.2% |
+| Total Queries | 42,211 |
+| Total Hits | 30,457 |
+
+> **Nhận xét:** Hit Rate đạt 72.2% cho thấy cứ 10 sản phẩm được gợi ý thì trung bình hơn 7 sản phẩm trùng với hành vi mua thực tế của khách hàng — một kết quả rất ấn tượng cho mô hình Content-based thuần túy.
 
 ---
 
