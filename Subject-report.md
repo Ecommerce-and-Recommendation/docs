@@ -291,11 +291,67 @@ Trong bài toán tặng Dynamic Voucher, không phải lúc nào ngưỡng phân
 
 Dựa trên phân bố xác suất và mục tiêu tối đa hóa F1-Score, ngưỡng tối ưu tìm được là **0.30** (F1 đạt 0.7429). Ngưỡng này giúp hệ thống cấp phát voucher chủ động hơn với tập khách hàng có "dấu hiệu" mua hàng tiềm năng.
 
-**2. Mô hình Phân cụm (K-Means):**
+### 5.2. Mô hình Phân cụm khách hàng (PCA + K-Means)
 
-- Điểm Silhouette Score duy trì ổn định, cho thấy độ tách biệt giữa các cụm khách hàng là khá rõ ràng (Radar Chart minh họa rõ sự chênh lệch lớn về mức chi tiêu và độ thường xuyên giữa nhóm VIP và nhóm Ngủ đông).
+Mục tiêu là gom nhóm khách hàng theo hành vi mua sắm để xây dựng chiến lược tiếp cận phù hợp cho từng phân khúc.
 
-**3. Mô hình Gợi ý (KNN):**
+**a) Giảm chiều dữ liệu bằng PCA**
+
+Trước khi phân cụm, áp dụng PCA (Principal Component Analysis) để giảm từ 7 features RFM xuống 3 thành phần chính, giúp loại bỏ nhiễu và tăng hiệu quả phân cụm.
+
+![PCA Explained Variance](assets/nb3_pca_variance_82034baf.png)
+
+| Thành phần | Phương sai riêng | Phương sai tích lũy |
+| ---------- | ---------------- | ------------------- |
+| PC1        | 35.3%            | 35.3%               |
+| PC2        | 18.8%            | 54.1%               |
+| PC3        | 17.0%            | **71.2%**           |
+
+> **Nhận xét:** 3 thành phần chính giữ lại 71.2% tổng phương sai — một mức hợp lý cho bài toán phân cụm, đủ để biểu diễn các pattern quan trọng nhất trong dữ liệu.
+
+![PCA Component Loadings](assets/nb3_pca_loadings_7e7a44d0.png)
+
+**b) Xác định số cụm tối ưu (Elbow Method + Silhouette)**
+
+Sử dụng kết hợp 3 chỉ số: Inertia (Elbow), Silhouette Score và Davies-Bouldin Index để tìm số cụm tốt nhất.
+
+![Elbow & Silhouette Analysis](assets/nb3_elbow_silhouette_62079702.png)
+
+| K   | Inertia | Silhouette | Davies-Bouldin |
+| --- | ------- | ---------- | -------------- |
+| 2   | 18,771  | 0.3301     | 1.2692         |
+| 3   | 13,796  | 0.3385     | 0.9757         |
+| **4** | **10,052** | **0.3740** | **0.8120**  |
+| 5   | 7,545   | 0.3946     | 0.7945         |
+
+> **Quyết định:** Mặc dù Silhouette gợi ý K=5, nhóm đồ án lựa chọn **K=4** theo business logic (VIP, Tiềm năng, Vãng lai, Ngủ đông) để phù hợp với chiến lược marketing thực tế.
+
+**c) Kết quả phân cụm**
+
+![Cluster Visualization](assets/nb3_cluster_scatter_3cc05999.png)
+![Silhouette Plot](assets/nb3_silhouette_plot_65f594c0.png)
+
+**Bảng phân bố khách hàng theo cụm:**
+
+| Segment | Tên gọi | Số lượng | Tỷ lệ | Recency | Frequency | Monetary (£) |
+| ------- | ------- | -------- | ------ | ------- | --------- | ------------ |
+| 0       | 💤 Ngủ đông (Hibernating)  | 1,069 | 21.3% | 410 ngày | 2 lần | £711 |
+| 1       | 👋 Vãng lai (Casual)       | 1,702 | 33.9% | 139 ngày | 2 lần | £793 |
+| 2       | 🌟 Tiềm năng (Potential)   | 2,237 | 44.5% | 98 ngày  | 9 lần | £3,703 |
+| 3       | 🏆 VIP (Champions)         | 15    | 0.3%  | 19 ngày  | 129 lần | £144,842 |
+
+**d) So sánh đặc trưng giữa các phân khúc (Radar Chart)**
+
+![Radar Chart](assets/nb3_radar_chart_0e5acf5d.png)
+![Feature Distribution by Segment](assets/nb3_feature_distribution_826848c6.png)
+
+> **Nhận xét:**
+>
+> - Nhóm **VIP** (0.3%) có tần suất mua cực cao (129 lần) và doanh thu khổng lồ (£144,842), đây là nhóm cần ưu tiên chăm sóc đặc biệt.
+> - Nhóm **Tiềm năng** (44.5%) chiếm đa số, có recency tốt và frequency ổn định — mục tiêu lý tưởng cho Dynamic Voucher.
+> - Nhóm **Ngủ đông** (21.3%) có recency rất cao (410 ngày), cần chiến dịch re-engagement.
+
+### 5.3. Mô hình Gợi ý sản phẩm (KNN)
 
 - Chỉ số Hit Rate khi đánh giá theo lịch sử đồng mua sắm cho kết quả cao, khẳng định các sản phẩm được đề xuất có độ tương đồng ngữ nghĩa cực kỳ tốt.
 
