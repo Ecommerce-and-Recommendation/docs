@@ -30,35 +30,35 @@ Hệ thống được thiết kế theo quy trình **End-to-End Pipeline**, chia
 
 ```mermaid
 graph TD
-    subgraph Data & ML Pipeline (Notebooks)
-        Raw[Dữ liệu Online Retail II] --> EDA[Tiền xử lý & Trích xuất Đặc trưng]
-        EDA --> |RFM Features| RF[Random Forest]
-        EDA --> |RFM Features| KM[PCA + K-Means]
-        EDA --> |Text + Numeric| KNN[TF-IDF + KNN]
-        KM --> |Segment IDs| RF2[Retrain Random Forest]
+    subgraph Pipeline["Data & ML Pipeline (Notebooks)"]
+        Raw["Dữ liệu Online Retail II"] --> EDA["Tiền xử lý & Trích xuất Đặc trưng"]
+        EDA -->|"RFM Features"| RF["Random Forest"]
+        EDA -->|"RFM Features"| KM["PCA + K-Means"]
+        EDA -->|"Text + Numeric"| KNN["TF-IDF + KNN"]
+        KM -->|"Segment IDs"| RF2["Retrain Random Forest"]
 
-        RF2 -.-> |Export .joblib| ModelStore
-        KM -.-> |Export .joblib| ModelStore
-        KNN -.-> |Export .joblib| ModelStore
+        RF2 -.->|"Export .joblib"| ModelStore
+        KM -.->|"Export .joblib"| ModelStore
+        KNN -.->|"Export .joblib"| ModelStore
     end
 
-    subgraph Backend System (FastAPI)
-        ModelStore[(Model Store in RAM)]
-        API_Auth[Auth Router]
-        API_Promo[Promotion Router]
-        API_Recs[Recommendation Router]
+    subgraph Backend["Backend System (FastAPI)"]
+        ModelStore[("Model Store in RAM")]
+        API_Auth["Auth Router"]
+        API_Promo["Promotion Router"]
+        API_Recs["Recommendation Router"]
 
-        API_Promo --> |Yêu cầu Dự đoán mua hàng| ModelStore
-        API_Recs --> |Yêu cầu Gợi ý SP| ModelStore
-        DB[(PostgreSQL)] --> API_Promo
+        API_Promo -->|"Yêu cầu Dự đoán mua hàng"| ModelStore
+        API_Recs -->|"Yêu cầu Gợi ý SP"| ModelStore
+        DB[("PostgreSQL")] --> API_Promo
         DB --> API_Recs
     end
 
-    subgraph Frontend (React)
-        UI[Giao diện Người dùng]
-        UI --> |HTTP Requests| API_Auth
-        UI --> |HTTP Requests| API_Promo
-        UI --> |HTTP Requests| API_Recs
+    subgraph Frontend["Frontend (React)"]
+        UI["Giao diện Người dùng"]
+        UI -->|"HTTP Requests"| API_Auth
+        UI -->|"HTTP Requests"| API_Promo
+        UI -->|"HTTP Requests"| API_Recs
     end
 ```
 
