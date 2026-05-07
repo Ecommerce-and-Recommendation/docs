@@ -71,21 +71,139 @@ graph TD
 Trong đề tài này sử dụng tập dữ liệu **Online Retail II** lấy từ nền tảng Kaggle (nguồn gốc từ UCI Machine Learning Repository).
 
 - **Nguồn gốc:** Tập dữ liệu thu thập các giao dịch trực tuyến của một cửa hàng quà tặng tại Vương quốc Anh từ tháng 12/2009 đến tháng 12/2011.
-- **Đặc điểm & Số lượng mẫu:** File dữ liệu thô ban đầu có hơn **1.000.000 dòng** (gồm 2 sheet 2009-2010 và 2010-2011). Dữ liệu có dạng Transactional, bao gồm các cột như: `InvoiceNo`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`, `UnitPrice`, `CustomerID`, và `Country`.
-- **Phân bố dữ liệu:** Dữ liệu có tỷ lệ chênh lệch lớp (Imbalance) khá rõ khi xét trên khía cạnh khách hàng mua lại hay không mua lại. Dữ liệu chủ yếu tập trung vào thị trường UK.
+- **Đặc điểm & Số lượng mẫu:** File dữ liệu thô ban đầu có **1,067,371 dòng** với 8 cột, chiếm **249.1 MB** bộ nhớ. Dữ liệu có dạng Transactional, bao gồm các cột: `Invoice`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`, `Price`, `Customer ID`, và `Country`.
 
-### 3.2. Tiền xử lý dữ liệu (Data Preprocessing)
+**Bảng 1: Cấu trúc Dataset ban đầu**
 
-Quá trình tiền xử lý là bắt buộc để lọc bỏ nhiễu và chuẩn bị cho mô hình. Các bước chính bao gồm:
+| Cột         | Kiểu dữ liệu | Non-Null Count |
+| ----------- | ------------ | -------------- |
+| Invoice     | object       | 1,067,371      |
+| StockCode   | object       | 1,067,371      |
+| Description | object       | 1,062,989      |
+| Quantity    | int64        | 1,067,371      |
+| InvoiceDate | datetime64   | 1,067,371      |
+| Price       | float64      | 1,067,371      |
+| Customer ID | float64      | 824,364        |
+| Country     | object       | 1,067,371      |
 
-1. **Làm sạch dữ liệu (Data Cleaning):**
-   - Loại bỏ các dòng bị thiếu `CustomerID` (không thể theo dõi hành vi).
-   - Loại bỏ các hóa đơn hủy (Invoice bắt đầu bằng chữ 'C') và các giao dịch có `Quantity` hoặc `Price` ≤ 0.
-   - Lọc bỏ các StockCode không phải sản phẩm (POST, BANK CHARGES...).
-2. **Trích xuất đặc trưng (Feature Engineering - RFM):**
-   - Từ dữ liệu thô, biến đổi về không gian vector khách hàng dựa trên mô hình **RFM (Recency, Frequency, Monetary)**.
-   - Bổ sung thêm các đặc trưng hành vi (Behavioral Features) như tỷ lệ hủy đơn, ngày mua nhiều nhất, giờ mua nhiều nhất... tổng cộng thu được 12 đặc trưng.
-3. **Phân tích EDA:** Các biểu đồ trực quan hóa doanh thu theo tháng cho thấy chu kỳ bán hàng lên đỉnh điểm vào các tháng cuối năm. Phân bố tập khách hàng đa số chỉ mua từ 1-2 lần, rất ít khách hàng trung thành, điều này khẳng định sự cần thiết của bài toán Phân cụm và AI Voucher.
+### 3.2. Phân tích giá trị thiếu (Missing Values)
+
+Phân tích giá trị thiếu cho thấy hai cột bị ảnh hưởng, trong đó `Customer ID` là nghiêm trọng nhất:
+
+![Missing Values Analysis](assets/missing_values.png)
+
+| Cột             | Số lượng thiếu | Tỷ lệ (%) |
+| --------------- | -------------- | --------- |
+| Customer ID     | 243,007        | 22.77%    |
+| Description     | 4,382          | 0.41%     |
+| Các cột còn lại | 0              | 0.00%     |
+
+> **Nhận xét:** Gần 23% dữ liệu không có thông tin khách hàng, điều này ảnh hưởng trực tiếp đến khả năng xây dựng hồ sơ hành vi, nên bước làm sạch bắt buộc phải loại bỏ các dòng này.
+
+### 3.3. Tiền xử lý dữ liệu (Data Preprocessing)
+
+Quá trình tiền xử lý là bắt buộc để lọc bỏ nhiễu và chuẩn bị cho mô hình. Các bước chính và kết quả cụ thể:
+
+**Bảng 2: Pipeline Làm sạch dữ liệu**
+
+| Bước                                      | Dòng còn lại | Ghi chú               |
+| ----------------------------------------- | ------------ | --------------------- |
+| Dữ liệu ban đầu                           | 1,067,371    | —                     |
+| Sau loại bỏ null Customer ID              | 824,364      | -22.77%               |
+| Sau loại bỏ đơn hủy (Invoice bắt đầu 'C') | 805,620      |                       |
+| Sau loại bỏ Quantity/Price ≤ 0            | 805,549      |                       |
+| Sau loại bỏ StockCode không hợp lệ        | **802,679**  | POST, BANK CHARGES... |
+
+> ✅ **Kết quả:** Dữ liệu sạch còn lại **802,679 dòng** (75.2% dữ liệu gốc), bao gồm **5,861 khách hàng** và **4,624 sản phẩm**, trong khoảng thời gian từ 2009-12-01 đến 2011-12-09.
+
+### 3.4. Phân tích khám phá dữ liệu (EDA)
+
+![Monthly Revenue](assets/monthly_revenue.png)
+![Country Revenue](assets/country_revenue.png)
+![Hourly & Daily Distribution](assets/hourly_daily_distribution.png)
+
+#### a) Top 10 sản phẩm bán chạy nhất
+
+![Top 10 Products](assets/top10_products.png)
+
+| Hạng | StockCode | Mô tả                              | Tổng SL | Doanh thu (£) | Số đơn |
+| ---- | --------- | ---------------------------------- | ------- | ------------- | ------ |
+| 1    | 84077     | WORLD WAR 2 GLIDERS ASSTD DESIGNS  | 109,169 | 24,905.87     | 920    |
+| 2    | 85123A    | WHITE HANGING HEART T-LIGHT HOLDER | 93,640  | 252,072.46    | 4,888  |
+| 3    | 23843     | PAPER CRAFT, LITTLE BIRDIE         | 80,995  | 168,469.60    | 1      |
+| 4    | 84879     | ASSORTED COLOUR BIRD ORNAMENT      | 79,913  | 127,074.17    | 2,652  |
+| 5    | 23166     | MEDIUM CERAMIC TOP STORAGE JAR     | 77,916  | 81,416.73     | 195    |
+| 6    | 85099B    | JUMBO BAG RED RETROSPOT            | 75,759  | 136,980.08    | 2,612  |
+| 7    | 17003     | BROCADE RING PURSE                 | 71,129  | 14,827.71     | 387    |
+| 8    | 21977     | PACK OF 60 PINK PAISLEY CAKE CASES | 55,270  | 26,733.45     | 1,578  |
+| 9    | 84991     | 60 TEATIME FAIRY CAKE CASES        | 53,495  | 26,121.57     | 1,765  |
+| 10   | 21212     | PACK OF 72 RETROSPOT CAKE CASES    | 46,107  | 22,214.26     | 1,348  |
+
+#### b) Thống kê giá trị đơn hàng
+
+![Order Value Distribution](assets/order_value_distribution.png)
+
+| Chỉ số                  | Giá trị     |
+| ----------------------- | ----------- |
+| Trung bình (Mean)       | £475.97     |
+| Trung vị (Median)       | £304.50     |
+| Giá trị thấp nhất (Min) | £0.38       |
+| Giá trị cao nhất (Max)  | £168,469.60 |
+
+#### c) Phân bố tần suất mua hàng của khách
+
+![Customer Order Frequency](assets/customer_order_frequency.png)
+
+| Phân loại           | Số lượng khách | Tỷ lệ |
+| ------------------- | -------------- | ----- |
+| Khách chỉ mua 1 lần | 1,625          | 27.7% |
+| Khách mua > 1 lần   | 4,236          | 72.3% |
+| Khách mua > 10 lần  | 866            | 14.8% |
+
+> **Nhận xét:** Đa số khách hàng (72.3%) có xu hướng quay lại mua hàng, tuy nhiên có đến 27.7% chỉ mua duy nhất một lần. Điều này khẳng định sự cần thiết của bài toán Dự đoán mua hàng và hệ thống Dynamic Voucher.
+
+### 3.5. Trích xuất đặc trưng (Feature Engineering)
+
+Từ dữ liệu sạch, tiến hành trích xuất **12 đặc trưng** cho mỗi khách hàng dựa trên mô hình **RFM mở rộng** (Recency, Frequency, Monetary + Behavioral Features).
+
+Biến mục tiêu `will_purchase` được xây dựng bằng cách chia dữ liệu theo mốc thời gian: Training period trước 30/06/2011 và Prediction period sau đó.
+
+**Phân bố biến mục tiêu (Target Variable):**
+
+![Target Variable Distribution](assets/target_distribution.png)
+
+| Nhãn | Ý nghĩa             | Số lượng | Tỷ lệ     |
+| ---- | ------------------- | -------- | --------- |
+| 1    | Sẽ mua lại          | 2,528    | 50.3%     |
+| 0    | Không mua lại       | 2,495    | 49.7%     |
+|      | **Tỷ lệ imbalance** |          | **1:1.0** |
+
+> ✅ **Nhận xét:** Dữ liệu target gần như cân bằng hoàn hảo (50/50), thuận lợi cho việc huấn luyện mô hình phân loại mà không cần đến các kỹ thuật xử lý imbalance phức tạp.
+
+**Bảng 3: Tương quan của các đặc trưng với biến mục tiêu `will_purchase`**
+
+![Correlation Heatmap](assets/correlation_heatmap.png)
+
+| Đặc trưng                 | Hệ số tương quan | Hướng     |
+| ------------------------- | ---------------- | --------- |
+| recency                   | -0.456           | ⬇️ Nghịch |
+| total_unique_products     | +0.307           | ⬆️ Thuận  |
+| frequency                 | +0.259           | ⬆️ Thuận  |
+| monetary                  | +0.131           | ⬆️ Thuận  |
+| days_since_first_purchase | +0.084           | ⬆️ Thuận  |
+| avg_days_between_orders   | +0.066           | ⬆️ Thuận  |
+| avg_order_value           | +0.057           | ⬆️ Thuận  |
+| cancellation_rate         | +0.046           | ⬆️ Thuận  |
+| avg_unit_price            | -0.043           | ⬇️ Nghịch |
+| favorite_hour             | -0.030           | ⬇️ Nghịch |
+| country_encoded           | -0.029           | ⬇️ Nghịch |
+| is_weekend_shopper        | +0.007           | —         |
+| avg_items_per_order       | +0.001           | —         |
+
+> **Nhận xét quan trọng:**
+>
+> - Đặc trưng **recency** (thời gian kể từ lần mua cuối) có tương quan nghịch mạnh nhất (-0.456), nghĩa là khách mua gần đây nhất có khả năng mua lại cao nhất.
+> - **total_unique_products** (+0.307) và **frequency** (+0.259) cũng là các features quan trọng, cho thấy khách hàng đa dạng sản phẩm và mua thường xuyên có xu hướng quay lại.
 
 ---
 
@@ -119,11 +237,59 @@ Hệ thống sử dụng kết hợp nhiều kỹ thuật học máy để giả
 
 ## 5. Kết quả thử nghiệm, so sánh, đánh giá
 
-**1. Mô hình Dự đoán mua hàng (Random Forest):**
+### 5.1. Mô hình Dự đoán mua hàng (Random Forest)
 
-- Thông qua kiểm chứng chéo 5 lần (5-Fold Cross Validation), mô hình cho điểm số đánh giá xuất sắc.
-- So sánh Baseline Model (Logistic Regression) với Random Forest Tuned, Random Forest vượt trội hoàn toàn.
-- F1-Score đạt được ở mức rất khả quan, với ma trận nhầm lẫn (Confusion Matrix) cho thấy số ca dự đoán True Positive và True Negative chiếm tỷ lệ áp đảo. Ngưỡng (Threshold) được lựa chọn là 0.7 để kích hoạt voucher một cách tối ưu.
+Tiến hành đánh giá mô hình phân loại với mục tiêu dự đoán khách hàng có mua lại hay không.
+
+**a) So sánh các mô hình (Model Comparison)**
+
+Hệ thống đã thử nghiệm 3 cấu hình khác nhau: Baseline (Logistic Regression), Random Forest (Mặc định) và Random Forest (Tuned qua GridSearchCV).
+
+![Model Comparison](assets/nb2_model_comparison_1d47e349.png)
+
+*Kết quả tốt nhất:* Mô hình **Random Forest (Tuned)** đạt độ đo ROC-AUC cao nhất (0.7931), F1-Score (0.7022). Siêu tham số tối ưu tìm được: `max_depth=10, min_samples_leaf=4, n_estimators=100, class_weight='balanced'`.
+
+**b) Kiểm chứng chéo (Cross-Validation)**
+
+Để đảm bảo mô hình không bị quá khớp (overfitting), chiến lược 5-Fold Cross Validation đã được thực hiện.
+
+![Cross Validation Results](assets/nb2_cross_validation_485481a6.png)
+
+Kết quả cho thấy độ ổn định cao trên các tập dữ liệu khác nhau:
+- **Accuracy:** 0.7404 ± 0.0131
+- **F1-Score:** 0.7290 ± 0.0154
+- **ROC-AUC:** 0.8179 ± 0.0136
+
+**c) Phân tích chi tiết lỗi (Confusion Matrix & ROC/PR Curves)**
+
+![Confusion Matrix](assets/nb2_confusion_matrix_6cbf53d0.png)
+![ROC & PR Curves](assets/nb2_roc_pr_curves_45fde291.png)
+
+Ma trận nhầm lẫn minh hoạ số lượng dự đoán đúng trên tập Test:
+- **True Positives (TP - 336):** Dự đoán khách sẽ mua, thực tế có mua.
+- **True Negatives (TN - 384):** Dự đoán không mua, thực tế không mua.
+Đường cong ROC và Precision-Recall thể hiện khả năng phân tách tốt giữa hai lớp, cho thấy hiệu suất thuật toán rất ổn định, diện tích dưới đường cong lớn.
+
+**d) Độ quan trọng của các đặc trưng (Feature Importance)**
+
+Việc tìm hiểu thuật toán Random Forest ưu tiên đặc trưng nào giúp bộ phận kinh doanh có cái nhìn sâu sắc hơn về hành vi khách hàng.
+
+![Feature Importance](assets/nb2_feature_importance_1d0aa3dd.png)
+
+Top các đặc trưng có tính quyết định cao nhất:
+1. **Recency (22.86%)**
+2. **Monetary (14.86%)**
+3. **Frequency (11.64%)**
+
+Điều này tái khẳng định mô hình RFM hoàn toàn phù hợp để biểu diễn mức độ trung thành của khách hàng.
+
+**e) Tối ưu hóa ngưỡng dự đoán (Probability Distribution)**
+
+Trong bài toán tặng Dynamic Voucher, không phải lúc nào ngưỡng phân loại mặc định (0.5) cũng là tốt nhất.
+
+![Probability Distribution](assets/nb2_probability_distribution_1597ade9.png)
+
+Dựa trên phân bố xác suất và mục tiêu tối đa hóa F1-Score, ngưỡng tối ưu tìm được là **0.30** (F1 đạt 0.7429). Ngưỡng này giúp hệ thống cấp phát voucher chủ động hơn với tập khách hàng có "dấu hiệu" mua hàng tiềm năng.
 
 **2. Mô hình Phân cụm (K-Means):**
 
