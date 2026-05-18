@@ -748,3 +748,23 @@ Biểu đồ gồm: (1) Boxplot phân bố các metrics qua 5 folds, (2) ROC Cur
 - Ở mức độ sản xuất lớn (Production), việc tính toán RFM trực tiếp từ database sẽ gây tải nặng, cần sử dụng Redis để Caching hoặc chạy tác vụ định kỳ qua Apache Airflow hoặc Message Queue (RabbitMQ).
 
 Hệ thống cung cấp một minh chứng rõ nét về tiềm năng ứng dụng Trí tuệ nhân tạo vào quy trình kinh doanh, góp phần tối ưu hóa cả trải nghiệm người dùng lẫn lợi nhuận của doanh nghiệp.
+
+## 7. Tài liệu tham khảo (References)
+
+**1. Dữ liệu & Nghiên cứu ứng dụng E-commerce (Dataset & Domain Knowledge)**
+
+- Chen, D., Sain, S. L., & Guo, K. (2012). Data mining for the online retail industry: A case study of RFM model-based customer segmentation using data mining. _Journal of Database Management (JDM)_, 23(3), 87-112. https://doi.org/10.4018/jdm.2012070105
+- Hughes, A. M. (1994). _Strategic database marketing: The masterplan for starting and managing a profitable, customer-based marketing program_. McGraw-Hill. (Tài liệu gốc nền tảng về mô hình RFM).
+
+**2. Các thuật toán & Kỹ thuật Học máy (Machine Learning Algorithms & Techniques)**
+
+- Breiman, L. (2001). Random forests. _Machine Learning_, 45(1), 5-32. https://doi.org/10.1023/A:1010933404324
+- MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In _Proceedings of the fifth Berkeley symposium on mathematical statistics and probability_ (Vol. 1, No. 14, pp. 281-297).
+- Rousseeuw, P. J. (1987). Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. _Journal of Computational and Applied Mathematics_, 20, 53-65. https://doi.org/10.1016/0377-0427(87)90125-7
+- Salton, G., & McGill, M. J. (1983). _Introduction to modern information retrieval_. McGraw-Hill. (Tài liệu gốc về TF-IDF và Cosine Similarity trong hệ thống gợi ý).
+- Sheng, J. D., & Ling, C. X. (2006). Thresholding for making classifiers cost-sensitive. In _Proceedings of the 21st national conference on Artificial intelligence (AAAI)_ (pp. 476-481). (Tài liệu giải thích kỹ thuật Optimal Threshold Moving 0.30).
+
+**3. Công cụ & Thư viện (Tools & Frameworks)**
+
+- Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., ... & Duchesnay, E. (2011). Scikit-learn: Machine learning in Python. _Journal of Machine Learning Research (JMLR)_, 12, 2825-2830.
+- Tiangolo. (2026). _FastAPI: High performance, easy to learn, fast to code, ready for production_. https://fastapi.tiangolo.com/
